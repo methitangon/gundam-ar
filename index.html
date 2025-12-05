@@ -22,6 +22,7 @@
             flex-direction: column;
             color: white;
             font-family: sans-serif;
+            text-align: center;
         }
 
         #start-button {
@@ -33,24 +34,24 @@
             border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
-            display: none;
-            /* Hidden until video is ready */
+            /* FIX: We show this immediately so iPhone users can click it */
+            display: block;
         }
     </style>
 </head>
 
 <body>
     <div id="overlay">
-        <div id="status">Loading Gundam Video...</div>
+        <div id="status">Ready to Start</div>
         <button id="start-button">Start AR</button>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false">
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.001;"
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-entity mindar-image-target="targetIndex: 0">
+        <a-entity mindar-image-target="targetIndex: 0" id="target">
             <a-video src="#my-video" position="0 0 0" height="0.75" width="1" rotation="0 0 0"></a-video>
         </a-entity>
 
@@ -64,30 +65,28 @@
     <script>
         const video = document.querySelector("#my-video");
         const startBtn = document.querySelector("#start-button");
-        const statusText = document.querySelector("#status");
         const overlay = document.querySelector("#overlay");
+        const target = document.querySelector('#target');
 
-        // When the video file is loaded enough to play
-        video.addEventListener('canplaythrough', () => {
-            console.log("Video loaded!");
-            statusText.innerText = "Video Ready!";
-            startBtn.style.display = "block";
-        });
-
-        // Fallback: If 'canplaythrough' doesn't fire on some mobiles, 
-        // this helps catch when it's ready.
-        video.addEventListener('loadeddata', () => {
-            console.log("Video data loaded!");
-            statusText.innerText = "Video Ready!";
-            startBtn.style.display = "block";
-        });
-
+        // 1. User clicks the button to enter AR
         startBtn.addEventListener('click', () => {
-            // Hide the overlay
             overlay.style.display = "none";
-            // Unmute and play the video
-            video.muted = false;
+            // Important: We "touch" the video to unlock it on iOS, then pause immediately
             video.play();
+            video.pause();
+        });
+
+        // 2. When camera SEES the target -> Play Video
+        target.addEventListener("targetFound", event => {
+            console.log("Gundam found!");
+            video.play();
+            video.muted = false; // Unmute when found
+        });
+
+        // 3. When camera LOSES the target -> Pause Video
+        target.addEventListener("targetLost", event => {
+            console.log("Gundam lost!");
+            video.pause();
         });
     </script>
 </body>
