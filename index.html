@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gundam AR</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: sans-serif;
+        }
+
+        #start-button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #E91E63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="overlay">
+        <div id="status">Loading Gundam Video...</div>
+        <button id="start-button">Start AR</button>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-video src="#my-video" position="0 0 0" height="0.75" width="1" rotation="0 0 0"></a-video>
+        </a-entity>
+
+        <a-assets>
+            <video id="my-video" src="./gunpla.mp4" loop="true" playsinline webkit-playsinline muted
+                preload="auto"></video>
+        </a-assets>
+    </a-scene>
+
+    <script>
+        const video = document.querySelector("#my-video");
+        const startBtn = document.querySelector("#start-button");
+        const statusText = document.querySelector("#status");
+        const overlay = document.querySelector("#overlay");
+
+        video.addEventListener('canplaythrough', () => {
+            statusText.innerText = "Video Ready!";
+            startBtn.style.display = "block";
+        });
+
+        startBtn.addEventListener('click', () => {
+            overlay.style.display = "none";
+            video.play();
+            video.muted = false;
+        });
+    </script>
+</body>
+
+</html>
