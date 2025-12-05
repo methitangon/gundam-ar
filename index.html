@@ -34,6 +34,7 @@
             cursor: pointer;
             margin-top: 20px;
             display: none;
+            /* Hidden until video is ready */
         }
     </style>
 </head>
@@ -54,8 +55,9 @@
         </a-entity>
 
         <a-assets>
-            <video id="my-video" src="./gunpla.MOV" loop="true" playsinline webkit-playsinline muted
-                preload="auto"></video>
+            <video id="my-video" src="./gunpla.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted
+                crossorigin="anonymous">
+            </video>
         </a-assets>
     </a-scene>
 
@@ -65,15 +67,27 @@
         const statusText = document.querySelector("#status");
         const overlay = document.querySelector("#overlay");
 
+        // When the video file is loaded enough to play
         video.addEventListener('canplaythrough', () => {
+            console.log("Video loaded!");
+            statusText.innerText = "Video Ready!";
+            startBtn.style.display = "block";
+        });
+
+        // Fallback: If 'canplaythrough' doesn't fire on some mobiles, 
+        // this helps catch when it's ready.
+        video.addEventListener('loadeddata', () => {
+            console.log("Video data loaded!");
             statusText.innerText = "Video Ready!";
             startBtn.style.display = "block";
         });
 
         startBtn.addEventListener('click', () => {
+            // Hide the overlay
             overlay.style.display = "none";
-            video.play();
+            // Unmute and play the video
             video.muted = false;
+            video.play();
         });
     </script>
 </body>
