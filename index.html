@@ -42,9 +42,9 @@
         AFRAME.registerShader('chromakey', {
             schema: {
                 src: { type: 'map' },
-                color: { default: { x: 0.1, y: 0.9, z: 0.2 }, type: 'vec3', is: 'uniform' }, // ค่าสีเขียวที่ต้องการเจาะ
-                similarity: { default: 0.03, type: 'float', is: 'uniform' }, // ความเหมือนของสี
-                smoothness: { default: 0.1, type: 'float', is: 'uniform' }  // ความเนียนขอบ
+                color: { default: { x: 0.1, y: 0.9, z: 0.2 }, type: 'vec3', is: 'uniform' },
+                similarity: { default: 0.03, type: 'float', is: 'uniform' },
+                smoothness: { default: 0.1, type: 'float', is: 'uniform' }
             },
             init: function (data) {
                 var videoTexture = new THREE.VideoTexture(data.src);
@@ -57,25 +57,18 @@
                         smoothness: { type: 'f', value: data.smoothness }
                     },
                     vertexShader: `
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-              }
-            `,
+                        varying vec2 vUv;
+                        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }
+                    `,
                     fragmentShader: `
-              uniform sampler2D map;
-              uniform vec3 color;
-              uniform float similarity;
-              uniform float smoothness;
-              varying vec2 vUv;
-              void main() {
-                vec4 tex = texture2D(map, vUv);
-                float dist = distance(tex.rgb, color);
-                float alpha = smoothstep(similarity, similarity + smoothness, dist);
-                gl_FragColor = vec4(tex.rgb, tex.a * alpha);
-              }
-            `,
+                        uniform sampler2D map; uniform vec3 color; uniform float similarity; uniform float smoothness; varying vec2 vUv;
+                        void main() {
+                            vec4 tex = texture2D(map, vUv);
+                            float dist = distance(tex.rgb, color);
+                            float alpha = smoothstep(similarity, similarity + smoothness, dist);
+                            gl_FragColor = vec4(tex.rgb, tex.a * alpha);
+                        }
+                    `,
                     transparent: true
                 });
             },
@@ -90,7 +83,7 @@
 
 <body>
     <div id="overlay">
-        <div id="status">พร้อมแล้วที่จะย้อนเวลา (Ready to Start)</div>
+        <div id="status">พร้อมแล้วที่จะย้อนเวลาแล้วหรือยัง (Ready to Start)</div>
         <button id="start-button">Start Experience</button>
     </div>
 
@@ -99,9 +92,11 @@
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-        <a-entity geometry="primitive: plane; height: 1.5; width: 2.6"
-            material="shader: chromakey; src: #my-video; color: 0.0 1.0 0.0; similarity: 0.25; smoothness: 0.1;"
-            position="0 0 0.1" rotation="0 0 0">
+        <a-entity mindar-image-target="targetIndex: 0" id="target">
+            <a-entity geometry="primitive: plane; height: 1.5; width: 2.6"
+                material="shader: chromakey; src: #my-video; color: 0.1 0.9 0.0; similarity: 0.25; smoothness: 0.1;"
+                position="0 0 0.1" rotation="0 0 0">
+            </a-entity>
         </a-entity>
 
         <a-assets>
@@ -111,6 +106,7 @@
     </a-scene>
 
     <script>
+        // ตอนนี้จะหาเจอแล้ว เพราะเราใส่ id="target" กลับไปแล้ว
         const video = document.querySelector("#my-video");
         const startBtn = document.querySelector("#start-button");
         const overlay = document.querySelector("#overlay");
@@ -118,14 +114,12 @@
 
         startBtn.addEventListener('click', () => {
             overlay.style.display = "none";
-            video.play();
-            video.pause();
+            video.play(); video.pause();
         });
 
         target.addEventListener("targetFound", event => {
             console.log("Target found!");
-            video.play();
-            video.muted = false;
+            video.play(); video.muted = false;
         });
 
         target.addEventListener("targetLost", event => {
