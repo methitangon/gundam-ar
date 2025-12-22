@@ -3,7 +3,7 @@
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gundam AR</title>
+    <title>Phimai Living History AR</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
@@ -34,31 +34,80 @@
             border-radius: 8px;
             cursor: pointer;
             margin-top: 20px;
-            /* FIX: We show this immediately so iPhone users can click it */
             display: block;
         }
     </style>
+
+    <script>
+        AFRAME.registerShader('chromakey', {
+            schema: {
+                src: { type: 'map' },
+                color: { default: { x: 0.1, y: 0.9, z: 0.2 }, type: 'vec3', is: 'uniform' }, // ค่าสีเขียวที่ต้องการเจาะ
+                similarity: { default: 0.03, type: 'float', is: 'uniform' }, // ความเหมือนของสี
+                smoothness: { default: 0.1, type: 'float', is: 'uniform' }  // ความเนียนขอบ
+            },
+            init: function (data) {
+                var videoTexture = new THREE.VideoTexture(data.src);
+                videoTexture.minFilter = THREE.LinearFilter;
+                this.material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        map: { type: 't', value: videoTexture },
+                        color: { type: 'v3', value: new THREE.Vector3(data.color.x, data.color.y, data.color.z) },
+                        similarity: { type: 'f', value: data.similarity },
+                        smoothness: { type: 'f', value: data.smoothness }
+                    },
+                    vertexShader: `
+              varying vec2 vUv;
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+              }
+            `,
+                    fragmentShader: `
+              uniform sampler2D map;
+              uniform vec3 color;
+              uniform float similarity;
+              uniform float smoothness;
+              varying vec2 vUv;
+              void main() {
+                vec4 tex = texture2D(map, vUv);
+                float dist = distance(tex.rgb, color);
+                float alpha = smoothstep(similarity, similarity + smoothness, dist);
+                gl_FragColor = vec4(tex.rgb, tex.a * alpha);
+              }
+            `,
+                    transparent: true
+                });
+            },
+            update: function (data) {
+                this.material.uniforms.color.value.set(data.color.x, data.color.y, data.color.z);
+                this.material.uniforms.similarity.value = data.similarity;
+                this.material.uniforms.smoothness.value = data.smoothness;
+            }
+        });
+    </script>
 </head>
 
 <body>
     <div id="overlay">
-        <div id="status">Ready to Start</div>
-        <button id="start-button">Start AR</button>
+        <div id="status">พร้อมแล้วที่จะย้อนเวลา (Ready to Start)</div>
+        <button id="start-button">Start Experience</button>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta: 0.001;"
+    <a-scene mindar-image="imageTargetSrc: ./ghost-door.mind; filterMinCF:0.0001; filterBeta: 0.001;"
         vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target">
-            <a-video src="#my-video" position="0 0 0" height="0.75" width="1" rotation="0 0 0"></a-video>
+            <a-entity geometry="primitive: plane; height: 1; width: 0.75"
+                material="shader: chromakey; src: #my-video; color: 0.0 1.0 0.0;" position="0 0 0.1" rotation="0 0 0">
+            </a-entity>
         </a-entity>
 
         <a-assets>
-            <video id="my-video" src="./gunpla.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted
-                crossorigin="anonymous">
-            </video>
+            <video id="my-video" src="./plane.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted
+                crossorigin="anonymous"></video>
         </a-assets>
     </a-scene>
 
@@ -68,24 +117,20 @@
         const overlay = document.querySelector("#overlay");
         const target = document.querySelector('#target');
 
-        // 1. User clicks the button to enter AR
         startBtn.addEventListener('click', () => {
             overlay.style.display = "none";
-            // Important: We "touch" the video to unlock it on iOS, then pause immediately
             video.play();
             video.pause();
         });
 
-        // 2. When camera SEES the target -> Play Video
         target.addEventListener("targetFound", event => {
-            console.log("Gundam found!");
+            console.log("Target found!");
             video.play();
-            video.muted = false; // Unmute when found
+            video.muted = false;
         });
 
-        // 3. When camera LOSES the target -> Pause Video
         target.addEventListener("targetLost", event => {
-            console.log("Gundam lost!");
+            console.log("Target lost!");
             video.pause();
         });
     </script>
