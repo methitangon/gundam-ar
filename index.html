@@ -37,53 +37,11 @@
             display: block;
         }
     </style>
-
-    <script>
-        AFRAME.registerShader('chromakey', {
-            schema: {
-                src: { type: 'map' },
-                color: { default: { x: 0.1, y: 0.9, z: 0.2 }, type: 'vec3', is: 'uniform' },
-                similarity: { default: 0.03, type: 'float', is: 'uniform' },
-                smoothness: { default: 0.1, type: 'float', is: 'uniform' }
-            },
-            init: function (data) {
-                var videoTexture = new THREE.VideoTexture(data.src);
-                videoTexture.minFilter = THREE.LinearFilter;
-                this.material = new THREE.ShaderMaterial({
-                    uniforms: {
-                        map: { type: 't', value: videoTexture },
-                        color: { type: 'v3', value: new THREE.Vector3(data.color.x, data.color.y, data.color.z) },
-                        similarity: { type: 'f', value: data.similarity },
-                        smoothness: { type: 'f', value: data.smoothness }
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }
-                    `,
-                    fragmentShader: `
-                        uniform sampler2D map; uniform vec3 color; uniform float similarity; uniform float smoothness; varying vec2 vUv;
-                        void main() {
-                            vec4 tex = texture2D(map, vUv);
-                            float dist = distance(tex.rgb, color);
-                            float alpha = smoothstep(similarity, similarity + smoothness, dist);
-                            gl_FragColor = vec4(tex.rgb, tex.a * alpha);
-                        }
-                    `,
-                    transparent: true
-                });
-            },
-            update: function (data) {
-                this.material.uniforms.color.value.set(data.color.x, data.color.y, data.color.z);
-                this.material.uniforms.similarity.value = data.similarity;
-                this.material.uniforms.smoothness.value = data.smoothness;
-            }
-        });
-    </script>
 </head>
 
 <body>
     <div id="overlay">
-        <div id="status">พร้อมแล้วที่จะย้อนเวลาแล้วหรือยัง (Ready to Start)</div>
+        <div id="status">พร้อมแล้วที่จะย้อนเวลาไหม (Ready to Start)</div>
         <button id="start-button">Start Experience</button>
     </div>
 
@@ -93,20 +51,19 @@
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
         <a-entity mindar-image-target="targetIndex: 0" id="target">
-            <a-entity geometry="primitive: plane; height: 1.5; width: 2.6"
-                material="shader: chromakey; src: #my-video; color: 0.1 0.9 0.0; similarity: 0.25; smoothness: 0.1;"
-                position="0 0 0.1" rotation="0 0 0">
-            </a-entity>
+
+            <a-video src="#my-video" position="0 0.4 0" width="1" height="1.777" rotation="0 0 0" opacity="1">
+            </a-video>
+
         </a-entity>
 
         <a-assets>
-            <video id="my-video" src="./plane.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted
+            <video id="my-video" src="./ghost-door.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted
                 crossorigin="anonymous"></video>
         </a-assets>
     </a-scene>
 
     <script>
-        // ตอนนี้จะหาเจอแล้ว เพราะเราใส่ id="target" กลับไปแล้ว
         const video = document.querySelector("#my-video");
         const startBtn = document.querySelector("#start-button");
         const overlay = document.querySelector("#overlay");
@@ -118,12 +75,12 @@
         });
 
         target.addEventListener("targetFound", event => {
-            console.log("Target found!");
+            console.log("Found!");
             video.play(); video.muted = false;
         });
 
         target.addEventListener("targetLost", event => {
-            console.log("Target lost!");
+            console.log("Lost!");
             video.pause();
         });
     </script>
