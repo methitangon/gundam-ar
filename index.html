@@ -41,7 +41,7 @@
 
 <body>
     <div id="overlay">
-        <div id="status">พร้อมแล้วที่จะย้อนเวลาไหม (Ready to Start)</div>
+        <div id="status">พร้อมแล้วที่จะย้อนเวลา (Ready to Start)</div>
         <button id="start-button">Start Experience</button>
     </div>
 
@@ -52,7 +52,7 @@
 
         <a-entity mindar-image-target="targetIndex: 0" id="target">
 
-            <a-video src="#my-video" position="0 0.4 0" width="1" height="1.777" rotation="0 0 0" opacity="1">
+            <a-video src="#my-video" position="0 0.4 0" width="1" height="1.777" rotation="-20 0 0" opacity="1">
             </a-video>
 
         </a-entity>
@@ -69,16 +69,19 @@
         const overlay = document.querySelector("#overlay");
         const target = document.querySelector('#target');
 
+        // 1. กดปุ่มเริ่ม
         startBtn.addEventListener('click', () => {
             overlay.style.display = "none";
-            video.play(); video.pause();
+            video.play(); video.pause(); // กระตุ้นวิดีโอให้พร้อมเล่น (iOS Workaround)
         });
 
+        // 2. เจอเป้าหมาย -> เล่นวิดีโอ
         target.addEventListener("targetFound", event => {
             console.log("Found!");
             video.play(); video.muted = false;
         });
 
+        // 3. หลุดเป้าหมาย -> หยุดวิดีโอ
         target.addEventListener("targetLost", event => {
             console.log("Lost!");
             video.pause();
