@@ -36,13 +36,18 @@
             margin-top: 20px;
             display: block;
         }
+
+        /* Hide the video element visually to avoid layout shifts */
+        #my-video {
+            display: none;
+        }
     </style>
 
     <script>
         AFRAME.registerShader('video-feather', {
             schema: {
                 src: { type: 'map', is: 'uniform' },
-                softness: { type: 'float', is: 'uniform', default: 0.2 } // Adjust this number for more/less blur
+                softness: { type: 'float', is: 'uniform', default: 0.2 }
             },
             vertexShader: `
                 varying vec2 vUV;
@@ -51,19 +56,16 @@
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
+            // OPTIMIZATION: 'precision mediump float' is faster on mobile GPUs
             fragmentShader: `
+                precision mediump float; 
                 uniform sampler2D src;
                 uniform float softness;
                 varying vec2 vUV;
                 void main() {
                     vec4 color = texture2D(src, vUV);
-                    
-                    // Calculate alpha based on distance from edges
-                    // Smoothstep creates the gradient fade
                     float alphaX = smoothstep(0.0, softness, vUV.x) * smoothstep(1.0, 1.0 - softness, vUV.x);
                     float alphaY = smoothstep(0.0, softness, vUV.y) * smoothstep(1.0, 1.0 - softness, vUV.y);
-                    
-                    // Apply transparency
                     gl_FragColor = vec4(color.rgb, color.a * alphaX * alphaY);
                 }
             `
@@ -77,22 +79,23 @@
         <button id="start-button">Start Experience</button>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: ./target/temple-wall.mind; filterMinCF:0.0001; filterBeta: 0.001;"
-        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-scene
+        mindar-image="imageTargetSrc: ./target/temple-wall.mind; filterMinCF:0.0001; filterBeta: 0.001; missTolerance: 5;"
+        vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
+        renderer="colorManagement: false; sortObjects: true;">
 
         <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
+        <a-light type="ambient" intensity="1"></a-light>
+
         <a-entity mindar-image-target="targetIndex: 0" id="target">
-
             <a-entity geometry="primitive: plane; width: 1; height: 0.5625"
-                material="shader: video-feather; src: #my-video; softness: 0.2; transparent: true" position="0 0 0.1"
-                rotation="0 0 0">
+                material="shader: video-feather; src: #my-video; softness: 0.2; transparent: true" position="0 0 0.1">
             </a-entity>
-
         </a-entity>
 
         <a-assets>
-            <video id="my-video" src="./video/interview.mp4" preload="none" loop="true" playsinline webkit-playsinline
+            <video id="my-video" src="./video/interview.mp4" preload="auto" loop="true" playsinline webkit-playsinline
                 muted crossorigin="anonymous"></video>
         </a-assets>
     </a-scene>
@@ -103,19 +106,51 @@
         const overlay = document.querySelector("#overlay");
         const target = document.querySelector('#target');
 
+        // VIDEO PLAYBACK SAFETY
+        // This prevents the "Play request was interrupted" error common on mobile
+        let playPromise = undefined;
+
+        const safePlay = () => {
+            playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    // Playback started successfully
+                    video.muted = false; // Unmute only after success
+                }).catch(error => {
+                    console.log("Auto-play prevented or error:", error);
+                });
+            }
+        };
+
+        const safePause = () => {
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    video.pause();
+                }).catch(error => {
+                    // If play failed, pause is irrelevant, just ignore
+                });
+            } else {
+                video.pause();
+            }
+        };
+
         startBtn.addEventListener('click', () => {
             overlay.style.display = "none";
-            video.play(); video.pause();
+            // "Prime" the video: Load -> Play -> Pause immediately
+            // This ensures the texture is ready in GPU memory
+            video.load();
+            safePlay();
+            setTimeout(() => { safePause(); video.currentTime = 0; }, 100);
         });
 
         target.addEventListener("targetFound", event => {
             console.log("Found!");
-            video.play(); video.muted = false;
+            safePlay();
         });
 
         target.addEventListener("targetLost", event => {
             console.log("Lost!");
-            video.pause();
+            safePause();
         });
     </script>
 </body>
